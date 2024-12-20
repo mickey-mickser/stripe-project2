@@ -1,0 +1,9 @@
+port: "9000"
+
+db:
+  username: "worker"
+  password: "1234"
+  host:     "localhost"
+  port:     "5437"
+  dbname:   "stripe-db"
+  sslmode:  "disable"

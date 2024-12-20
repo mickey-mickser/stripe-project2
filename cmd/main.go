@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"github.com/mickey-mickser/stripe-project2"
 	"github.com/mickey-mickser/stripe-project2/pkg/handler"
 	"github.com/mickey-mickser/stripe-project2/pkg/repository"
@@ -10,6 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -21,7 +26,7 @@ func main() {
 		logrus.Fatalf("error write .env: %s", err)
 	}
 
-	db, err := repository.NewPostgresDB(repository.Config{
+	db, sqlDB, err := repository.NewPostgresDB(repository.Config{
 		Host:     viper.GetString("db.host"),
 		Port:     viper.GetString("db.port"),
 		Username: viper.GetString("db.username"),
@@ -32,22 +37,38 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to init db: %v", err.Error())
 	}
-
+	defer repository.ClosePostgresDB(sqlDB)
 	if err != nil {
 		logrus.Fatalf("Failed to connect to database: %v", err)
 	}
 	//Dependency Injection(Внедрение зависимостей)
 	repos := repository.NewRepository(db)
 	services := usecase.NewUseCase(repos)
-	//sessionStorage := cash.NewSessionStorage()
 	handlers := handler.NewHandler(services)
-	//handlers := handler.NewHandler(services, sessionStorage)
 
-	// Инициализация Handler с SessionStorage
 	srv := new(api.Server)
+	go func() {
+		if err := srv.Start(viper.GetString("port"), handlers.InitRouter()); err != nil {
+			logrus.Fatalf("error occurred while running the HTTP server: %s", err.Error())
+		}
+	}()
+	logrus.Print("Api Started")
 
-	if err := srv.Start(viper.GetString("port"), handlers.InitRouter()); err != nil {
-		logrus.Fatalf("error occurred while running the HTTP server: %s", err.Error())
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	logrus.Print("Api Down")
+
+	if err := srv.Shutdown(context.Background()); err != nil {
+		logrus.Errorf("error occured on server shutting down: %s", err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logrus.Errorf("error occurred on server shutdown: %s", err.Error())
 	}
 
 }

@@ -59,6 +59,7 @@ func (h *Handler) createPaymentSession(w http.ResponseWriter, r *http.Request) {
 	s, err := session.New(params)
 	if err != nil {
 		logrus.Errorf("Checkout session creation failed: %v", err)
+		//500
 		http.Error(w, "Checkout session creation failed", http.StatusInternalServerError)
 		return
 	}

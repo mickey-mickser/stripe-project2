@@ -27,7 +27,6 @@ type PaymentSession struct {
 }
 
 func (s *SessionStatus) CreateSession(ctx context.Context, sessionID, username, status string, amount float64) error {
-	// Создание новой сессии с контекстом
 	session := PaymentSession{
 		SessionID: sessionID,
 		Username:  username,
@@ -35,17 +34,14 @@ func (s *SessionStatus) CreateSession(ctx context.Context, sessionID, username, 
 		Status:    status,
 	}
 
-	// Использование контекста в методе Create
 	if err := s.db.WithContext(ctx).Create(&session).Error; err != nil {
 		return err
 	}
 
-	// Логируем успешное создание сессии
 	return nil
 }
 
 func (s *SessionStatus) UpdateSessionStatus(ctx context.Context, sessionID, status string) error {
-	// Используем query builder для обновления статуса сессии
 	if err := s.db.WithContext(ctx).
 		Model(&PaymentSession{}).
 		Where("session_id = ?", sessionID).
@@ -61,21 +57,17 @@ func (s *SessionStatus) UpdateSessionStatus(ctx context.Context, sessionID, stat
 func (s *SessionStatus) GetStatus(ctx context.Context, sessionID string) (*api.PaymentSession, error) {
 	var status api.PaymentSession
 
-	// Выполнение запроса на получение данных из базы
 	query := s.db.WithContext(ctx).Model(&api.PaymentSession{}).
 		Where("session_id = ?", sessionID).
 		First(&status)
 
-	// Проверка на ошибку выполнения запроса
 	if err := query.Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Возвращаем ошибку, если сессия не найдена
 			return nil, errors.New("session not found")
 		}
-		// Если произошла другая ошибка, возвращаем ее
+
 		return nil, err
 	}
 
-	// Возвращаем указатель на найденную сессию
 	return &status, nil
 }

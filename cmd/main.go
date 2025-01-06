@@ -9,12 +9,12 @@ import (
 	"github.com/mickey-mickser/stripe-project2/pkg/handler"
 	"github.com/mickey-mickser/stripe-project2/pkg/repository"
 	"github.com/mickey-mickser/stripe-project2/pkg/usecase"
+	"github.com/mickey-mickser/stripe-project2/run"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -41,11 +41,20 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("Failed to connect to database: %v", err)
 	}
+	dataFromSession := make(chan handler.DataSession)
+	logrus.Info(dataFromSession)
 	//Dependency Injection(Внедрение зависимостей)
 	repos := repository.NewRepository(db)
 	services := usecase.NewUseCase(repos)
 	handlers := handler.NewHandler(services)
+	//
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	syn := &run.Syncer{
+		Repo: *repos,
+	}
+	go syn.Start(ctx)
 	srv := new(api.Server)
 	go func() {
 		if err := srv.Start(viper.GetString("port"), handlers.InitRouter()); err != nil {
@@ -53,20 +62,13 @@ func main() {
 		}
 	}()
 	logrus.Print("Api Started")
+	/////////////////
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
 
 	logrus.Print("Api Down")
-
-	if err := srv.Shutdown(context.Background()); err != nil {
-		logrus.Errorf("error occured on server shutting down: %s", err.Error())
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	if err := srv.Shutdown(ctx); err != nil {
 		logrus.Errorf("error occurred on server shutdown: %s", err.Error())
 	}

@@ -34,7 +34,7 @@ func (h *Handler) InitRouter() *chi.Mux {
 	router.Route("/stripe", func(r chi.Router) {
 		{
 			r.Get("/{username}/{sum}", h.createPaymentSession)
-			r.Get("/{sessionID}/status", h.getSessionStatus)
+			//r.Get("/{sessionID}/status", h.getSessionStatus)
 		}
 	})
 	return router

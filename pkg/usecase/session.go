@@ -23,3 +23,7 @@ func (s *SessionStatus) UpdateSessionStatus(ctx context.Context, sessionID, stat
 func (s *SessionStatus) GetStatus(ctx context.Context, sessionID string) (*api.PaymentSession, error) {
 	return s.repo.GetStatus(ctx, sessionID)
 }
+func (s *SessionStatus) SelectSessions(ctx context.Context, status string) ([]api.PaymentSession, error) {
+
+	return s.repo.SelectSessions(ctx, status)
+}

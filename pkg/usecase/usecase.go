@@ -9,6 +9,7 @@ import (
 type Session interface {
 	CreateSession(ctx context.Context, sessionID, username, status string, amount float64) error
 	UpdateSessionStatus(ctx context.Context, sessionID, status string) error
+	SelectSessions(ctx context.Context, status string) ([]api.PaymentSession, error)
 	GetStatus(ctx context.Context, sessionID string) (*api.PaymentSession, error)
 }
 type UserBalance interface {

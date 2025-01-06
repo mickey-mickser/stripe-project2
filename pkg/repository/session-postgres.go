@@ -71,3 +71,16 @@ func (s *SessionStatus) GetStatus(ctx context.Context, sessionID string) (*api.P
 
 	return &status, nil
 }
+func (s *SessionStatus) SelectSessions(ctx context.Context, status string) ([]api.PaymentSession, error) {
+	var sessions []api.PaymentSession
+	query := s.db.WithContext(ctx).Model(&api.PaymentSession{}).
+		Where("status = ?", status).
+		Find(&sessions)
+	if err := query.Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("session not found")
+		}
+		return nil, err
+	}
+	return sessions, nil
+}
